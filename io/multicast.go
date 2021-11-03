@@ -90,6 +90,7 @@ func (multicast *MulticastType) readWorker() {
 			}
 		}
 	}
+	close(multicast.readerChan)
 }
 
 func (multicast *MulticastType) Open() {
