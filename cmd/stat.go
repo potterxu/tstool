@@ -100,6 +100,9 @@ func statisticWorker(reader io.IOInterface) {
 		buf := reader.Read()
 		if buf != nil {
 			tsPkt := mpts.Packet(buf)
+			if tsPkt == nil {
+				continue
+			}
 			cnt[tsPkt.PID]++
 		} else {
 			stopped = true
