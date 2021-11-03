@@ -90,7 +90,7 @@ func statisticWorker(reader io.IOInterface) {
 				table.Rows = append(table.Rows, []string{fmt.Sprint(k), fmt.Sprint(bitrate)})
 				cnt[k] = 0
 			}
-			table.SetRect(0, 0, 40, (len(keys) + 2))
+			table.SetRect(0, 0, 40, (len(keys) + 4))
 			ui.Render(table)
 			start = time.Now()
 		}
