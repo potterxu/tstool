@@ -1,6 +1,10 @@
 package mpts
 
-import "log"
+import (
+	"log"
+
+	"github.com/potterxu/tstool/bitreader"
+)
 
 const (
 	TS_PACKET_SIZE int  = 188
@@ -30,7 +34,8 @@ func Packet(data []byte) *PacketType {
 }
 
 func (pkt *PacketType) parse() {
-	upper := int(pkt.data[1] & 0x1f)
-	lower := int(pkt.data[2] & 0xff)
-	pkt.PID = upper<<8 + lower
+	r := bitreader.BitReader(pkt.data[:])
+	r.SkipBytes(1)
+	r.SkipBits(3)
+	pkt.PID = r.ReadBits(13)
 }
