@@ -3,7 +3,8 @@ package mpts
 import "log"
 
 const (
-	TS_PACKET_SIZE int = 188
+	TS_PACKET_SIZE int  = 188
+	SYNC_BYTE      byte = 0x47
 )
 
 type PacketType struct {
@@ -15,6 +16,11 @@ type PacketType struct {
 func Packet(data []byte) *PacketType {
 	if len(data) != TS_PACKET_SIZE {
 		log.Fatal("Invaid ts packet size ", len(data))
+		return nil
+	}
+	if data[0] != SYNC_BYTE {
+		log.Fatal("Invalid sync byte ", data[0])
+		return nil
 	}
 	pkt := &PacketType{}
 	pkt.data = make([]byte, TS_PACKET_SIZE)
