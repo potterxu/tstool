@@ -8,7 +8,7 @@ const (
 )
 
 type PacketType struct {
-	data []byte
+	data [188]byte // stores the raw data
 
 	PID int
 }
@@ -23,8 +23,7 @@ func Packet(data []byte) *PacketType {
 		return nil
 	}
 	pkt := &PacketType{}
-	pkt.data = make([]byte, TS_PACKET_SIZE)
-	copy(pkt.data, data)
+	copy(pkt.data[:], data)
 
 	pkt.parse()
 	return pkt
