@@ -1,7 +1,9 @@
 package mpts
 
 import (
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/potterxu/tstool/bitreader"
 )
@@ -63,7 +65,7 @@ func (pkt *PacketType) parse() {
 	// Adaptation
 	if (pkt.AFC & 0x10) > 0 {
 		pkt.AdaptationLength = r.ReadBits(8)
-		pkt.Adaptation = adaptation(pkt.data[5:5+pkt.AdaptationLength], r)
+		pkt.Adaptation = adaptation(pkt.data[5 : 5+pkt.AdaptationLength])
 	}
 
 	// Payload
@@ -71,4 +73,23 @@ func (pkt *PacketType) parse() {
 		pkt.PayloadLength = TS_PACKET_SIZE - 5 - pkt.AdaptationLength
 		pkt.Payload = payload(pkt.data[5+pkt.AdaptationLength:])
 	}
+}
+
+func (pkt *PacketType) String() string {
+	var sb strings.Builder
+	sb.WriteString("TS Packet:\n")
+	sb.WriteString("data: [ ")
+	for _, v := range pkt.data {
+		sb.WriteString(fmt.Sprintf("%x ", v))
+	}
+	sb.WriteString("]\n")
+	sb.WriteString(fmt.Sprintln("TEI: ", pkt.TEI))
+	sb.WriteString(fmt.Sprintln("PUSI: ", pkt.PUSI))
+	sb.WriteString(fmt.Sprintln("TP: ", pkt.TP))
+	sb.WriteString(fmt.Sprintln("PID: ", pkt.PID))
+	sb.WriteString(fmt.Sprintln("TSC: ", pkt.TSC))
+	sb.WriteString(fmt.Sprintln("AFC: ", pkt.AFC))
+	sb.WriteString(fmt.Sprintln("CC: ", pkt.CC))
+
+	return sb.String()
 }
