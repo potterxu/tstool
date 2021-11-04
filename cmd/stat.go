@@ -50,16 +50,6 @@ func init() {
 
 	statCmd.Flags().IntVarP(&interval, "interval", "i", 3, "Statistics update interval in seconds")
 	statCmd.Flags().BoolVarP(&dynamic, "dynamic", "d", false, "Dynamic updating statistics")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// statCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// statCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func dynamicStatisticWorker(reader io.IOInterface) {
