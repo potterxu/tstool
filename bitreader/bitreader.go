@@ -36,7 +36,7 @@ func (reader *BitReaderType) SkipBits(cnt int) {
 func (reader *BitReaderType) readInByte(cnt int) int64 {
 	readBits := cnt
 	unReadbits := BYTE - reader.offset - readBits
-	mask := (1<<readBits - 1) ^ (1<<unReadbits - 1)
+	mask := (0xff >> reader.offset) ^ (0xff >> (reader.offset + readBits))
 
 	rv := (int64(reader.data[reader.base]) & int64(mask)) >> int64(unReadbits)
 
