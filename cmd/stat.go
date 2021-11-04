@@ -40,7 +40,6 @@ var (
 		Short: "statistics of ts stream",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
-			// fmt.Println("stat", args)
 			runStat(args)
 		},
 	}
