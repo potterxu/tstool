@@ -33,6 +33,7 @@ import (
 // statCmd represents the stat command
 var (
 	interval int
+	dynamic  bool
 
 	statCmd = &cobra.Command{
 		Use:   "stat",
@@ -48,7 +49,8 @@ var (
 func init() {
 	rootCmd.AddCommand(statCmd)
 
-	statCmd.Flags().IntVarP(&interval, "interval", "i", 1, "Statistics update interval in seconds")
+	statCmd.Flags().IntVarP(&interval, "interval", "i", 3, "Statistics update interval in seconds")
+	statCmd.Flags().BoolVarP(&dynamic, "dynamic", "d", false, "Dynamic updating statistics")
 
 	// Here you will define your flags and configuration settings.
 
@@ -61,7 +63,7 @@ func init() {
 	// statCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func statisticWorker(reader io.IOInterface) {
+func dynamicStatisticWorker(reader io.IOInterface) {
 	cnt := make(map[int]int64)
 	table := widgets.NewTable()
 	table.TextStyle = ui.NewStyle(ui.ColorWhite)
@@ -86,10 +88,11 @@ func statisticWorker(reader io.IOInterface) {
 			}
 			sort.Ints(keys)
 			for _, k := range keys {
-				bitrate := cnt[k] * int64(mpts.TS_PACKET_SIZE) * int64(8) / int64(interval)
+				bitrate := cnt[k] / int64(interval)
 				table.Rows = append(table.Rows, []string{fmt.Sprint(k), fmt.Sprint(bitrate)})
-				cnt[k] = 0
+				delete(cnt, k)
 			}
+
 			table.SetRect(0, 0, 40, (len(keys) + 4))
 			ui.Render(table)
 			start = time.Now()
@@ -103,11 +106,42 @@ func statisticWorker(reader io.IOInterface) {
 			if tsPkt == nil {
 				continue
 			}
-			cnt[tsPkt.PID]++
+			cnt[tsPkt.PID] += int64(tsPkt.PayloadLength * 8)
 		} else {
 			stopped = true
 		}
 	}
+}
+
+func staticStatistics(reader io.IOInterface) {
+	start := time.Now()
+	cnt := make(map[int]int64)
+
+	for {
+		if buf := reader.Read(); buf != nil && time.Since(start) <= time.Duration(interval)*time.Second {
+			tsPkt := mpts.Packet(buf)
+			if tsPkt == nil {
+				continue
+			}
+			cnt[tsPkt.PID] += int64(tsPkt.PayloadLength * 8)
+		} else {
+			break
+		}
+	}
+
+	keys := make([]int, len(cnt))
+	i := 0
+	for k := range cnt {
+		keys[i] = k
+		i++
+	}
+	sort.Ints(keys)
+	for _, k := range keys {
+		bitrate := cnt[k] / int64(interval)
+		fmt.Println(k, bitrate)
+		delete(cnt, k)
+	}
+
 }
 
 func validateArgs(args []string) bool {
@@ -132,20 +166,23 @@ func runStat(args []string) {
 	ioReader.Open()
 	defer ioReader.Close()
 
-	if err := ui.Init(); err != nil {
-		log.Fatalf("failed to initialize termui: %v", err)
-	}
-	defer ui.Close()
-
-	go statisticWorker(ioReader)
-
-	uiEvents := ui.PollEvents()
-	for {
-		e := <-uiEvents
-		switch e.ID {
-		case "q", "<C-c>":
-			return
+	if dynamic {
+		if err := ui.Init(); err != nil {
+			log.Fatalf("failed to initialize termui: %v", err)
 		}
-	}
+		defer ui.Close()
 
+		go dynamicStatisticWorker(ioReader)
+
+		uiEvents := ui.PollEvents()
+		for {
+			e := <-uiEvents
+			switch e.ID {
+			case "q", "<C-c>":
+				return
+			}
+		}
+	} else {
+		staticStatistics(ioReader)
+	}
 }
