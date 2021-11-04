@@ -61,13 +61,13 @@ func (pkt *PacketType) parse() {
 	pkt.PayloadLength = 0
 
 	// Adaptation
-	if pkt.AFC&0x10 > 0 {
+	if (pkt.AFC & 0x10) > 0 {
 		pkt.AdaptationLength = r.ReadBits(8)
 		pkt.Adaptation = adaptation(pkt.data[5:5+pkt.AdaptationLength], r)
 	}
 
 	// Payload
-	if pkt.AFC&0x01 > 0 {
+	if (pkt.AFC & 0x01) > 0 {
 		pkt.PayloadLength = TS_PACKET_SIZE - 5 - pkt.AdaptationLength
 		pkt.Payload = payload(pkt.data[5+pkt.AdaptationLength:])
 	}
