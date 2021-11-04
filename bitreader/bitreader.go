@@ -1,6 +1,8 @@
 package bitreader
 
 import (
+	"fmt"
+
 	"github.com/potterxu/tstool/util"
 )
 
@@ -23,8 +25,19 @@ func BitReader(data []byte) *BitReaderType {
 	}
 }
 
+func (reader *BitReaderType) CheckBits(cnt int) bool {
+	remain := len(reader.data) - reader.base
+	remain *= 8
+	remain -= reader.offset
+
+	if remain < cnt {
+		panic(fmt.Sprintf("[Out of bound] %d bits required, but only %d remained.", cnt, remain))
+	}
+	return true
+}
+
 func (reader *BitReaderType) SkipBytes(cnt int) {
-	reader.base += cnt
+	reader.SkipBits(cnt * BYTE)
 }
 
 func (reader *BitReaderType) SkipBits(cnt int) {
@@ -44,6 +57,7 @@ func (reader *BitReaderType) readInByte(cnt int) int64 {
 }
 
 func (reader *BitReaderType) ReadBits64(cnt int) int64 {
+	reader.CheckBits(cnt)
 	rv := int64(0)
 	for cnt > 0 {
 		readBits := util.MinInt(cnt, BYTE-reader.offset)
