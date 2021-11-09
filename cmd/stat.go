@@ -83,6 +83,7 @@ func dynamicStatisticWorker(reader io.IOInterface) {
 			}
 
 			table.SetRect(0, 0, 40, (len(keys) + 4))
+			ui.Clear()
 			ui.Render(table)
 			start = time.Now()
 		}
