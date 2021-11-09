@@ -30,7 +30,7 @@ func (reader *BitReaderType) CheckBits(cnt int) bool {
 	remain *= 8
 	remain -= reader.offset
 
-	if remain < cnt {
+	if remain < cnt || cnt < 0 {
 		panic(fmt.Sprintf("[Out of bound] %d bits required, but only %d remained.", cnt, remain))
 	}
 	return true
@@ -46,31 +46,31 @@ func (reader *BitReaderType) SkipBits(cnt int) {
 	reader.offset += cnt % BYTE
 }
 
-func (reader *BitReaderType) readInByte(cnt int) int64 {
-	readBits := cnt
+func (reader *BitReaderType) readInByte(cnt int) (rv int64, readBits int) {
+	readBits = util.MinInt(cnt, BYTE-reader.offset)
 	unReadbits := BYTE - reader.offset - readBits
 	mask := (0xff >> reader.offset) ^ (0xff >> (reader.offset + readBits))
 
-	rv := (int64(reader.data[reader.base]) & int64(mask)) >> int64(unReadbits)
+	rv = (int64(reader.data[reader.base]) & int64(mask)) >> int64(unReadbits)
 
-	return rv
+	if readBits+reader.offset == BYTE {
+		reader.base++
+		reader.offset = 0
+	} else {
+		reader.offset += readBits
+	}
+
+	return
 }
 
 func (reader *BitReaderType) ReadBits64(cnt int) int64 {
 	reader.CheckBits(cnt)
 	rv := int64(0)
 	for cnt > 0 {
-		readBits := util.MinInt(cnt, BYTE-reader.offset)
+		value, readBits := reader.readInByte(cnt)
 		rv <<= int64(readBits)
-		rv += reader.readInByte(readBits)
-
+		rv += value
 		cnt -= readBits
-		if readBits+reader.offset == BYTE {
-			reader.base++
-			reader.offset = 0
-		} else {
-			reader.offset += readBits
-		}
 	}
 	return rv
 }
