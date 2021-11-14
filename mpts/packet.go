@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/potterxu/tstool/bitreader"
+	"github.com/potterxu/bitreader"
 )
 
 const (
@@ -52,19 +52,19 @@ func Packet(data []byte) *PacketType {
 func (pkt *PacketType) parse() {
 	r := bitreader.BitReader(pkt.data[:])
 	r.SkipBytes(1)
-	pkt.TEI = r.ReadBit()
-	pkt.PUSI = r.ReadBit()
-	pkt.TP = r.ReadBit()
-	pkt.PID = r.ReadBits(13)
-	pkt.TSC = r.ReadBits(2)
-	pkt.AFC = r.ReadBits(2)
-	pkt.CC = r.ReadBits(4)
+	pkt.TEI, _ = r.ReadBit()
+	pkt.PUSI, _ = r.ReadBit()
+	pkt.TP, _ = r.ReadBit()
+	pkt.PID, _ = r.ReadBits(13)
+	pkt.TSC, _ = r.ReadBits(2)
+	pkt.AFC, _ = r.ReadBits(2)
+	pkt.CC, _ = r.ReadBits(4)
 	pkt.AdaptationLength = 0
 	pkt.PayloadLength = 0
 
 	// Adaptation
 	if (pkt.AFC & 0x10) > 0 {
-		pkt.AdaptationLength = r.ReadBits(8)
+		pkt.AdaptationLength, _ = r.ReadBits(8)
 		pkt.Adaptation = adaptation(pkt.data[5 : 5+pkt.AdaptationLength])
 	}
 

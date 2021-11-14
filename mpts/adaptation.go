@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/potterxu/tstool/bitreader"
+	"github.com/potterxu/bitreader"
 )
 
 type PrivateDataType struct {
@@ -85,39 +85,46 @@ func adaptation(data []byte) *AdaptationType {
 	return adapt
 }
 
+func parsePCR(r *bitreader.BitReaderType) (int64, int64) {
+	base, _ := r.ReadBits64(33)
+	r.SkipBits(6)
+	ext, _ := r.ReadBits64(9)
+	return base, ext
+}
+
 func (adapt *AdaptationType) parse() {
 	r := bitreader.BitReader(adapt.data)
 
-	adapt.DI = r.ReadBit()
-	adapt.RAI = r.ReadBit()
-	adapt.ESPI = r.ReadBit()
-	adapt.PCRFlag = r.ReadBit()
-	adapt.OPCRFlag = r.ReadBit()
-	adapt.SplicingPointFlag = r.ReadBit()
-	adapt.PrivateDataFlag = r.ReadBit()
-	adapt.ExtensionFlag = r.ReadBit()
+	adapt.DI, _ = r.ReadBit()
+	adapt.RAI, _ = r.ReadBit()
+	adapt.ESPI, _ = r.ReadBit()
+	adapt.PCRFlag, _ = r.ReadBit()
+	adapt.OPCRFlag, _ = r.ReadBit()
+	adapt.SplicingPointFlag, _ = r.ReadBit()
+	adapt.PrivateDataFlag, _ = r.ReadBit()
+	adapt.ExtensionFlag, _ = r.ReadBit()
 
 	offset := 1
 
 	if adapt.PCRFlag {
-		base, ext := r.ReadPCR()
+		base, ext := parsePCR(r)
 		adapt.PCR = base*300 + ext
 		offset += 6
 	}
 
 	if adapt.OPCRFlag {
-		base, ext := r.ReadPCR()
+		base, ext := parsePCR(r)
 		adapt.OPCR = base*300 + ext
 		offset += 6
 	}
 
 	if adapt.SplicingPointFlag {
-		adapt.SpliceCountdown = r.ReadBits(8)
+		adapt.SpliceCountdown, _ = r.ReadBits(8)
 		offset += 1
 	}
 
 	if adapt.PrivateDataFlag {
-		adapt.PrivateDataLength = r.ReadBits(8)
+		adapt.PrivateDataLength, _ = r.ReadBits(8)
 		offset += 1
 
 		adapt.PrivateData = privateData(adapt.data[offset : offset+adapt.PrivateDataLength])
@@ -126,7 +133,7 @@ func (adapt *AdaptationType) parse() {
 	}
 
 	if adapt.ExtensionFlag {
-		adapt.ExtensionLength = r.ReadBits(8)
+		adapt.ExtensionLength, _ = r.ReadBits(8)
 		offset += 1
 
 		adapt.Extension = extension(adapt.data[offset : offset+adapt.ExtensionLength])
