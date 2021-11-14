@@ -10,7 +10,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"github.com/potterxu/tstool/mpts"
+	"github.com/potterxu/mpts"
 	"github.com/potterxu/tstool/util"
 )
 

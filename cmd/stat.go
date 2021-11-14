@@ -24,8 +24,8 @@ import (
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"github.com/potterxu/mpts"
 	"github.com/potterxu/tstool/io"
-	"github.com/potterxu/tstool/mpts"
 	"github.com/potterxu/tstool/util"
 	"github.com/spf13/cobra"
 )
