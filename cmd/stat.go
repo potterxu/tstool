@@ -33,7 +33,6 @@ import (
 // statCmd represents the stat command
 var (
 	interval int
-	dynamic  bool
 
 	statCmd = &cobra.Command{
 		Use:   "stat",
@@ -49,89 +48,49 @@ func init() {
 	rootCmd.AddCommand(statCmd)
 
 	statCmd.Flags().IntVarP(&interval, "interval", "i", 3, "Statistics update interval in seconds")
-	statCmd.Flags().BoolVarP(&dynamic, "dynamic", "d", false, "Dynamic updating statistics")
 }
 
-func dynamicStatisticWorker(reader io.IOInterface) {
-	cnt := make(map[int]int64)
-	table := widgets.NewTable()
-	table.TextStyle = ui.NewStyle(ui.ColorWhite)
-	table.RowSeparator = false
-	table.TextAlignment = ui.AlignCenter
+func multicastStatWorker(reader io.IOReaderInterface) {
+	pktCnt := make(map[int]int64)
+	rows := make([][]string, 0)
 
 	start := time.Now()
 	duration := time.Duration(interval) * time.Second
-	stopped := false
 
 	for {
-		if time.Since(start) >= duration || stopped {
-			table.Rows = [][]string{
-				[]string{"pids", "ts rate/bps"},
+		if time.Since(start) >= duration {
+			rows = [][]string{
+				{"pids", "ts rate/bps"},
 			}
 
-			keys := make([]int, len(cnt))
+			keys := make([]int, len(pktCnt))
 			i := 0
-			for k := range cnt {
+			for k := range pktCnt {
 				keys[i] = k
 				i++
 			}
 			sort.Ints(keys)
 			for _, k := range keys {
-				bitrate := cnt[k] / int64(interval)
-				table.Rows = append(table.Rows, []string{fmt.Sprint(k), fmt.Sprint(bitrate)})
-				delete(cnt, k)
+				bitrate := pktCnt[k] / int64(interval)
+				rows = append(rows, []string{fmt.Sprint(k), fmt.Sprint(bitrate)})
+				delete(pktCnt, k)
 			}
-
-			table.SetRect(0, 0, 40, (len(keys) + 4))
-			ui.Clear()
-			ui.Render(table)
+			displayInTableUI(rows)
 			start = time.Now()
 		}
-		if stopped {
-			break
-		}
-		buf := reader.Read()
-		if buf != nil {
-			tsPkt := mpts.Packet(buf)
-			if tsPkt == nil {
-				continue
+		buf, ok := reader.Read()
+		if ok && buf != nil {
+			for i := 0; i < len(buf); i += 188 {
+				pktBuf := buf[i : i+188]
+				tsPkt := mpts.Packet(pktBuf)
+				if tsPkt == nil {
+					log.Fatal("invalid ts packet buffer ", pktBuf)
+					continue
+				}
+				pktCnt[tsPkt.PID] += int64(tsPkt.PayloadLength * 8)
 			}
-			cnt[tsPkt.PID] += int64(tsPkt.PayloadLength * 8)
-		} else {
-			stopped = true
 		}
 	}
-}
-
-func staticStatistics(reader io.IOInterface) {
-	start := time.Now()
-	cnt := make(map[int]int64)
-
-	for {
-		if buf := reader.Read(); buf != nil && time.Since(start) <= time.Duration(interval)*time.Second {
-			tsPkt := mpts.Packet(buf)
-			if tsPkt == nil {
-				continue
-			}
-			cnt[tsPkt.PID] += int64(tsPkt.PayloadLength * 8)
-		} else {
-			break
-		}
-	}
-
-	keys := make([]int, len(cnt))
-	i := 0
-	for k := range cnt {
-		keys[i] = k
-		i++
-	}
-	sort.Ints(keys)
-	for _, k := range keys {
-		bitrate := cnt[k] / int64(interval)
-		fmt.Println(k, bitrate)
-		delete(cnt, k)
-	}
-
 }
 
 func validateArgs(args []string) bool {
@@ -143,36 +102,58 @@ func validateArgs(args []string) bool {
 	return true
 }
 
-func runStat(args []string) {
-	validateArgs(args)
-
-	// multicast
+func multicastStat(args []string) {
 	intf := args[0]
 	ipAddr := args[1]
 	port, err := strconv.Atoi(args[2])
 	util.ExitOnErr(err)
-	ioReader, err := io.Multicast(ipAddr, port, intf)
-	util.ExitOnErr(err)
-	ioReader.Open()
-	defer ioReader.Close()
 
-	if dynamic {
-		if err := ui.Init(); err != nil {
-			log.Fatalf("failed to initialize termui: %v", err)
-		}
-		defer ui.Close()
+	var reader io.IOReaderInterface
 
-		go dynamicStatisticWorker(ioReader)
-
-		uiEvents := ui.PollEvents()
-		for {
-			e := <-uiEvents
-			switch e.ID {
-			case "q", "<C-c>":
-				return
-			}
-		}
-	} else {
-		staticStatistics(ioReader)
+	if true {
+		// multicast
+		reader, err = io.UdpReader(ipAddr, port, intf)
+		util.ExitOnErr(err)
 	}
+
+	reader.Open()
+	defer reader.Close()
+
+	startUI()
+	defer listenUIEvent()
+
+	go multicastStatWorker(reader)
+}
+
+func runStat(args []string) {
+	validateArgs(args)
+	multicastStat(args)
+}
+
+func startUI() {
+	err := ui.Init()
+	util.ExitOnErr(err)
+}
+
+func listenUIEvent() {
+	uiEvents := ui.PollEvents()
+	for {
+		e := <-uiEvents
+		switch e.ID {
+		case "q", "<C-c>":
+			ui.Close()
+			return
+		}
+	}
+}
+
+func displayInTableUI(rows [][]string) {
+	table := widgets.NewTable()
+	table.TextStyle = ui.NewStyle(ui.ColorWhite)
+	table.RowSeparator = false
+	table.TextAlignment = ui.AlignCenter
+	table.Rows = rows
+	table.SetRect(0, 0, 40, len(rows)+4)
+	ui.Clear()
+	ui.Render(table)
 }
