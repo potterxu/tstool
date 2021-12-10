@@ -9,7 +9,6 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"github.com/potterxu/tstool/util"
 )
 
 type UdpReaderType struct {
@@ -21,36 +20,37 @@ type UdpReaderType struct {
 	packetSource *gopacket.PacketSource
 }
 
-func validateIPv4Address(ipAddr string, port int) bool {
-	if net.ParseIP(ipAddr) == nil {
-		log.Fatal("Invalid ip adderss ", ipAddr)
-		return false
-	}
-	if port < 0 || port > 65535 {
-		log.Fatal("Invalid port ", port)
-		return false
-	}
-
-	return true
-}
-
-func UdpReader(ip string, port int, interf string) (*UdpReaderType, error) {
-	if !validateIPv4Address(ip, port) {
-		return nil, fmt.Errorf("invalid IPv4 address")
-	}
+func UdpReader(ip string, port int, interf string) *UdpReaderType {
 	return &UdpReaderType{
 		ipAddr: ip,
 		port:   port,
 		interf: interf,
-	}, nil
+	}
 }
 
-func (udpReader *UdpReaderType) Open() {
-	var err error
+func (udpReader *UdpReaderType) validateIPv4Address() error {
+	if net.ParseIP(udpReader.ipAddr) == nil {
+		return fmt.Errorf("invalid ip adderss ", udpReader.ipAddr)
+	}
+	if udpReader.port < 0 || udpReader.port > 65535 {
+		return fmt.Errorf("Invalid port ", udpReader.port)
+	}
+
+	return nil
+}
+
+func (udpReader *UdpReaderType) Open() error {
+	err := udpReader.validateIPv4Address()
+	if err != nil {
+		return err
+	}
 	udpReader.handle, err = pcap.OpenLive(udpReader.interf, 1504, false, 100*time.Millisecond)
-	util.ExitOnErr(err)
+	if err != nil {
+		return err
+	}
 
 	udpReader.packetSource = gopacket.NewPacketSource(udpReader.handle, udpReader.handle.LinkType())
+	return nil
 }
 
 func (udpReader *UdpReaderType) Close() {
@@ -66,27 +66,27 @@ func (udpReader *UdpReaderType) Read() ([]byte, bool) {
 
 	iplayer := packet.Layer(layers.LayerTypeIPv4)
 	if iplayer == nil {
-		return nil, false
+		return nil, true
 	}
 
 	ip, _ := iplayer.(*layers.IPv4)
 	if udpReader.ipAddr != ip.DstIP.String() {
-		return nil, false
+		return nil, true
 	}
 
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer == nil {
-		return nil, false
+		return nil, true
 	}
 
 	udp, _ := udpLayer.(*layers.UDP)
 	if udpReader.port != int(udp.DstPort) {
-		return nil, false
+		return nil, true
 	}
 
 	appLayer := packet.ApplicationLayer()
 	if appLayer == nil {
-		return nil, false
+		return nil, true
 	}
 
 	return appLayer.Payload(), true

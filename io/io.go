@@ -1,19 +1,19 @@
 package io
 
 type IOReaderInterface interface {
-	Open()
+	Open() error
 	Close()
 	Read() ([]byte, bool)
 }
 
 type IOWriterInterface interface {
-	Open()
+	Open() error
 	Close()
 	Write([]byte)
 }
 
 type IOInterface interface {
-	Open()
+	Open() error
 	Close()
 	Read() ([]byte, bool)
 	Write([]byte)
