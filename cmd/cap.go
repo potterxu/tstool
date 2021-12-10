@@ -78,7 +78,8 @@ func capMulticast(args []string) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	timer := time.NewTimer(time.Duration(captureTime) * time.Second)
+	capDuraion := time.Duration(captureTime) * time.Second
+	timer := time.NewTimer(capDuraion)
 	if captureTime <= 0 {
 		timer.Stop()
 	}
@@ -86,7 +87,7 @@ func capMulticast(args []string) {
 	select {
 	case <-c:
 	case <-timer.C:
-		log.Default().Println("Captures for ", time.Duration(captureTime))
+		log.Default().Println("Captures for", time.Duration(capDuraion))
 	}
 
 	log.Default().Println("Capture done")
