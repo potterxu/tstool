@@ -153,7 +153,7 @@ func displayInTableUI(rows [][]string) {
 	table.RowSeparator = false
 	table.TextAlignment = ui.AlignCenter
 	table.Rows = rows
-	table.SetRect(0, 0, 40, len(rows)+4)
+	table.SetRect(0, 0, 40, len(rows)+2)
 	ui.Clear()
 	ui.Render(table)
 }
