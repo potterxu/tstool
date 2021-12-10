@@ -16,6 +16,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -84,11 +85,29 @@ func capMulticast(args []string) {
 		timer.Stop()
 	}
 
-	select {
-	case <-c:
-	case <-timer.C:
-		log.Default().Println("Captures for", time.Duration(capDuraion))
+	refreshDuation := time.Duration(200) * time.Millisecond
+	totalDuration := time.Duration(0)
+	progressTimer := time.NewTimer(refreshDuation)
+
+	running := true
+	for running {
+		select {
+		case <-c:
+			running = false
+		case <-timer.C:
+			running = false
+		case <-progressTimer.C:
+			totalDuration += refreshDuation
+			if captureTime > 0 {
+				fmt.Printf("\rCaptured for %v / %v", totalDuration.Round(time.Second), capDuraion)
+			} else {
+				fmt.Printf("\rCaptured for %v", totalDuration.Round(time.Second))
+			}
+			progressTimer.Reset(refreshDuation)
+		}
 	}
+	progressTimer.Stop()
+	fmt.Println()
 
 	log.Default().Println("Capture done")
 }
