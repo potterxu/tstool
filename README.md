@@ -2,9 +2,10 @@
 
 personal tool for ts analysis
 
+```
 Usage:
   tstool [command]
-
+  
 Available Commands:
   cap         capture ts multicast
   help        Help about any command
@@ -12,3 +13,4 @@ Available Commands:
 
 Flags:
   -h, --help            help for tstool
+```
