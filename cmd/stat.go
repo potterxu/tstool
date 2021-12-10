@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 Potter Xu <xujingchuan1995@gmail.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"sort"
 	"strconv"
 	"time"
@@ -54,11 +56,12 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 	pktCnt := make(map[int]int64)
 	rows := make([][]string, 0)
 
-	start := time.Now()
-	duration := time.Duration(interval) * time.Second
+	timer := time.NewTimer(time.Duration(interval) * time.Second)
 
 	for {
-		if time.Since(start) >= duration {
+		select {
+		case <-timer.C:
+			timer.Reset(time.Duration(interval) * time.Second)
 			rows = [][]string{
 				{"pids", "ts rate/bps"},
 			}
@@ -76,10 +79,13 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 				delete(pktCnt, k)
 			}
 			displayInTableUI(rows)
-			start = time.Now()
+		default:
 		}
 		buf, ok := reader.Read()
-		if ok && buf != nil {
+		if !ok {
+			break
+		}
+		if buf != nil {
 			for i := 0; i < len(buf); i += 188 {
 				pktBuf := buf[i : i+188]
 				tsPkt := mpts.Packet(pktBuf)
@@ -93,7 +99,7 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 	}
 }
 
-func validateArgs(args []string) bool {
+func validateStatArgs(args []string) bool {
 	// multicast
 	if len(args) < 3 {
 		log.Fatal("need interface, multicast address and port")
@@ -106,45 +112,53 @@ func multicastStat(args []string) {
 	intf := args[0]
 	ipAddr := args[1]
 	port, err := strconv.Atoi(args[2])
-	util.ExitOnErr(err)
+	util.PanicOnErr(err)
 
 	var reader io.IOReaderInterface
 
 	if true {
 		// multicast
-		reader, err = io.UdpReader(ipAddr, port, intf)
-		util.ExitOnErr(err)
+		reader = io.UdpReader(ipAddr, port, intf)
 	}
 
-	reader.Open()
+	err = reader.Open()
+	util.PanicOnErr(err)
 	defer reader.Close()
 
 	startUI()
-	defer listenUIEvent()
+	defer ui.Close()
 
 	go multicastStatWorker(reader)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	uiEvents := ui.PollEvents()
+
+	running := true
+	for running {
+		select {
+		case <-c:
+			running = false
+		case e := <-uiEvents:
+			switch e.ID {
+			case "q", "<C-c>":
+				running = false
+			}
+		}
+	}
 }
 
 func runStat(args []string) {
-	validateArgs(args)
+	if !validateStatArgs(args) {
+		return
+	}
 	multicastStat(args)
 }
 
 func startUI() {
 	err := ui.Init()
-	util.ExitOnErr(err)
-}
-
-func listenUIEvent() {
-	uiEvents := ui.PollEvents()
-	for {
-		e := <-uiEvents
-		switch e.ID {
-		case "q", "<C-c>":
-			ui.Close()
-			return
-		}
-	}
+	util.PanicOnErr(err)
 }
 
 func displayInTableUI(rows [][]string) {

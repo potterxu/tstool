@@ -5,6 +5,12 @@ import (
 	"os"
 )
 
+func LogOnErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func PanicOnErr(err error) {
 	if err != nil {
 		panic(err)
