@@ -52,20 +52,25 @@ func runParsePsi(args []string) {
 	if patPayload == nil {
 		log.Fatalln("No PAT found")
 	}
-	pat := mpts.Psi(patPayload).TableData.PAT
-	pmtPID := pat.ProgramMapPID
+	pats := mpts.Psi(patPayload).TableData.PAT
+	for _, pat := range pats {
+		fmt.Println("Program:", pat.ProgramNum)
 
-	pmtPayload := getFirstPayload(inputFileName, pmtPID)
-	pmt := mpts.Psi(pmtPayload).TableData.PMT
-	fmt.Println("PCR:", pmt.PcrPID)
-	fmt.Println("ProgramDescriptors:")
-	for _, d := range pmt.ProgramDescriptors {
-		fmt.Println("\t Descriptor", d.Tag, d.Data)
-	}
-	for _, info := range pmt.ElementStreamInfos {
-		fmt.Println("PID:", info.ElementaryPID)
-		for _, d := range info.ESDescriptors {
-			fmt.Println("\t Descriptor", d.Tag, d.Data)
+		pmtPID := pat.ProgramMapPID
+		fmt.Println("\tPmtPID:", pmtPID)
+
+		pmtPayload := getFirstPayload(inputFileName, pmtPID)
+		pmt := mpts.Psi(pmtPayload).TableData.PMT
+		fmt.Println("\tPCR:", pmt.PcrPID)
+		fmt.Println("\tProgramDescriptors:")
+		for _, d := range pmt.ProgramDescriptors {
+			fmt.Println("\t\t Descriptor", d.Tag, d.Data)
+		}
+		for _, info := range pmt.ElementStreamInfos {
+			fmt.Println("\tPID:", info.ElementaryPID)
+			for _, d := range info.ESDescriptors {
+				fmt.Println("\t\t Descriptor", d.Tag, d.Data)
+			}
 		}
 	}
 }
