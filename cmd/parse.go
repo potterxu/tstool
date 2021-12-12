@@ -22,8 +22,6 @@ import (
 )
 
 var (
-	parsePid int
-
 	parseCmd = &cobra.Command{
 		Use:   "parse",
 		Short: "parse ts",
@@ -36,8 +34,6 @@ var (
 
 func init() {
 	rootCmd.AddCommand(parseCmd)
-
-	parseCmd.PersistentFlags().IntVar(&parsePid, "pid", -1, "Specify stream PID to be parsed")
 }
 
 func validateParseArgs(args []string) bool {
