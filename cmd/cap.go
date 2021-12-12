@@ -28,13 +28,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// capCmd represents the stat command
 var (
 	outputFileName string
 	captureTime    int
 
 	capCmd = &cobra.Command{
-		Use:   "cap",
+		Use:   "cap (interface ipAddress port)",
 		Short: "capture ts multicast",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -115,7 +114,7 @@ func capMulticast(args []string) {
 func validateCapArgs(args []string) bool {
 	// multicast
 	if len(args) < 3 {
-		log.Fatal("need interface, multicast address and port")
+		log.Fatal("use -h check for usage")
 		return false
 	}
 	return true
