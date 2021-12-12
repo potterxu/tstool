@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/gizak/termui/v3 v3.1.0
 	github.com/google/gopacket v1.1.19
-	github.com/potterxu/mpts v1.0.0
+	github.com/potterxu/mpts v1.1.0
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.10.0
 )
