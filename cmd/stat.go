@@ -37,7 +37,7 @@ var (
 	interval int
 
 	statCmd = &cobra.Command{
-		Use:   "stat",
+		Use:   "stat (interface ipAddress port)",
 		Short: "statistics of ts stream",
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -102,7 +102,7 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 func validateStatArgs(args []string) bool {
 	// multicast
 	if len(args) < 3 {
-		log.Fatal("need interface, multicast address and port")
+		log.Fatal("use -h check for usage")
 		return false
 	}
 	return true
