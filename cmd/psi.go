@@ -87,7 +87,7 @@ func getFirstPayload(fileName string, pid int) []byte {
 		if !ok {
 			break
 		}
-		payload, ok := parser.Parse(mpts.Packet(data))
+		payload, _, ok := parser.Parse(mpts.Packet(data))
 		if ok && payload != nil {
 			return payload
 		}

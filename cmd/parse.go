@@ -16,13 +16,21 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"log"
+	"os"
+	"path"
 
+	"github.com/potterxu/mpts"
+	"github.com/potterxu/tstool/io"
+	"github.com/potterxu/tstool/parser"
+	"github.com/potterxu/tstool/util"
 	"github.com/spf13/cobra"
 )
 
 var (
-	parseCmd = &cobra.Command{
+	outputDir string
+	parseCmd  = &cobra.Command{
 		Use:   "parse",
 		Short: "parse ts",
 		Long:  ``,
@@ -34,6 +42,8 @@ var (
 
 func init() {
 	rootCmd.AddCommand(parseCmd)
+
+	parseCmd.Flags().StringVarP(&outputDir, "outdir", "o", "out", "output directory")
 }
 
 func validateParseArgs(args []string) bool {
@@ -46,101 +56,140 @@ func validateParseArgs(args []string) bool {
 	return false
 }
 
+var (
+	programNumToPcrParser = make(map[int]*parser.PcrParserType)
+	pidToPayloadParser    = make(map[int]*parser.PayloadParserType)
+	pidToOutfile          = make(map[int]string)
+	pcrPidToOutfile       = make(map[int]string)
+	pidToProgramNum       = make(map[int]int)
+
+	pcrPIDs  = make([]int, 0)
+	filename = ""
+)
+
 func runParse(args []string) {
-	log.Default().Println("Use -h to check usage of parse command")
+	if !validateParseArgs(args) {
+		return
+	}
+
+	filename = args[0]
+	err := os.Mkdir(outputDir, 0755)
+	util.PanicOnErr(err)
+
+	patPayload := getFirstPayload(filename, 0)
+	pats := mpts.Psi(patPayload).TableData.PAT
+
+	for _, pat := range pats {
+		programDir := fmt.Sprintf("Program_%v", pat.ProgramNum)
+		programPath := path.Join(outputDir, programDir)
+		err := os.Mkdir(programPath, 0755)
+		util.PanicOnErr(err)
+		// log.Default().Println("Parse Program", pat.ProgramNum)
+
+		pmtPID := pat.ProgramMapPID
+		pmtPayload := getFirstPayload(filename, pmtPID)
+		pmt := mpts.Psi(pmtPayload).TableData.PMT
+
+		pmtOutFile := fmt.Sprintf("pmt_%v.csv", pmtPID)
+		pmtOutPath := path.Join(outputDir, programDir, pmtOutFile)
+		pidToOutfile[pmtPID] = pmtOutPath
+
+		pcrPID := pmt.PcrPID
+		programNumToPcrParser[pat.ProgramNum] = parser.PcrParser(pcrPID)
+		pcrOutFile := fmt.Sprintf("pcr_%v.csv", pcrPID)
+		pcrOutPath := path.Join(outputDir, programDir, pcrOutFile)
+		pcrPidToOutfile[pcrPID] = pcrOutPath
+		pcrPIDs = append(pcrPIDs, pcrPID)
+
+		for _, info := range pmt.ElementStreamInfos {
+			PID := info.ElementaryPID
+			outFile := fmt.Sprintf("%v.csv", PID)
+			outPath := path.Join(outputDir, programDir, outFile)
+			pidToOutfile[PID] = outPath
+			pidToProgramNum[PID] = pat.ProgramNum
+			pidToPayloadParser[PID] = parser.PayloadParser(PID)
+		}
+	}
+
+	parsePcrPIDS()
+	parsePesPIDs()
 }
 
-// func capMulticast(args []string) {
-// 	intf := args[0]
-// 	ipAddr := args[1]
-// 	port, err := strconv.Atoi(args[2])
-// 	util.PanicOnErr(err)
+func parsePcrPIDS() {
+	reader := io.FileReader(filename)
+	err := reader.Open()
+	util.PanicOnErr(err)
+	defer reader.Close()
 
-// 	reader := io.UdpReader(ipAddr, port, intf)
-// 	err = reader.Open()
-// 	util.PanicOnErr(err)
-// 	defer reader.Close()
+	head := fmt.Sprintln("Pos", "Pcr")
 
-// 	writer := io.FileWriter(outputFileName)
-// 	err = writer.Open()
-// 	util.PanicOnErr(err)
-// 	defer writer.Close()
+	pcrPIDtoWriter := make(map[int]io.IOWriterInterface)
+	for _, PID := range pcrPIDs {
+		w := io.FileWriter(pcrPidToOutfile[PID])
+		err := w.Open()
+		util.PanicOnErr(err)
+		defer w.Close()
+		w.Write([]byte(head))
+		pcrPIDtoWriter[PID] = w
+	}
 
-// 	log.Default().Println("Capture Start")
-// 	go commonWorker(reader, writer)
+	for {
+		data, ok := reader.Read()
+		if !ok {
+			break
+		}
+		if data != nil {
+			pkt := mpts.Packet(data)
+			if ok {
+				for _, parser := range programNumToPcrParser {
+					pcr, pos, ok := parser.Parse(pkt)
+					if ok {
+						record := fmt.Sprintln(pos, pcr)
+						pcrPIDtoWriter[pkt.PID].Write([]byte(record))
+					}
+				}
+			}
+		}
+	}
+}
 
-// 	c := make(chan os.Signal, 1)
-// 	signal.Notify(c, os.Interrupt)
+func parsePesPIDs() {
+	reader := io.FileReader(filename)
+	err := reader.Open()
+	util.PanicOnErr(err)
+	defer reader.Close()
 
-// 	capDuraion := time.Duration(captureTime) * time.Second
-// 	timer := time.NewTimer(capDuraion)
-// 	if captureTime <= 0 {
-// 		timer.Stop()
-// 	}
+	pos := int64(0)
 
-// 	refreshDuation := time.Duration(200) * time.Millisecond
-// 	totalDuration := time.Duration(0)
-// 	progressTimer := time.NewTimer(refreshDuation)
+	head := fmt.Sprintln("Pos", "Size", "Pcr")
 
-// 	running := true
-// 	for running {
-// 		select {
-// 		case <-c:
-// 			running = false
-// 		case <-timer.C:
-// 			running = false
-// 		case <-progressTimer.C:
-// 			totalDuration += refreshDuation
-// 			if captureTime > 0 {
-// 				fmt.Printf("\rCaptured for %v / %v", totalDuration.Round(time.Second), capDuraion)
-// 			} else {
-// 				fmt.Printf("\rCaptured for %v", totalDuration.Round(time.Second))
-// 			}
-// 			progressTimer.Reset(refreshDuation)
-// 		}
-// 	}
-// 	progressTimer.Stop()
-// 	fmt.Println()
+	pidToWriter := make(map[int]io.IOWriterInterface)
+	for PID := range pidToPayloadParser {
+		w := io.FileWriter(pidToOutfile[PID])
+		err := w.Open()
+		util.PanicOnErr(err)
+		defer w.Close()
+		w.Write([]byte(head))
+		pidToWriter[PID] = w
+	}
 
-// 	log.Default().Println("Capture done")
-// }
-
-// func validateCapArgs(args []string) bool {
-// 	// multicast
-// 	if len(args) < 3 {
-// 		log.Fatal("need interface, multicast address and port")
-// 		return false
-// 	}
-// 	return true
-// }
-
-// // parser
-// parsers := make(map[int]*parser.ParserType)
-// pktPos := int64(0)
-// for {
-// 	buf, _ := reader.Read()
-// 	// if !ok || buf == nil (
-// 	// 	continue
-// 	// )
-// 	for i := 0; i < len(buf); i += mpts.TS_PACKET_SIZE {
-// 		pktBuf := buf[i : i+mpts.TS_PACKET_SIZE]
-// 		pkt := mpts.Packet(pktBuf)
-
-// 		pid := pkt.PID
-// 		if pid == 8191 {
-// 			continue
-// 		}
-// 		if parsers[pid] == nil {
-// 			parsers[pid] = parser.Parser()
-// 		}
-
-// 		parsers[pid].Feed(pkt, pktPos)
-// 		if pkt.AdaptationLength > 0 && pkt.Adaptation.PCRFlag {
-// 			for p, parser := range parsers {
-// 				parser.FeedPcr(pkt.Adaptation.PCR, pktPos)
-// 				fmt.Println(p, parser.GetBitrate())
-// 			}
-// 		}
-// 		pktPos++
-// 	}
-// }
+	for {
+		data, ok := reader.Read()
+		if !ok {
+			break
+		}
+		if data != nil {
+			pkt := mpts.Packet(data)
+			if ok {
+				for _, parser := range pidToPayloadParser {
+					payload, pos, ok := parser.Parse(pkt)
+					if ok {
+						record := fmt.Sprintln(pos, len(payload), programNumToPcrParser[pidToProgramNum[pkt.PID]].GetPcr(pos))
+						pidToWriter[pkt.PID].Write([]byte(record))
+					}
+				}
+			}
+			pos++
+		}
+	}
+}
