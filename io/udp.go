@@ -11,10 +11,16 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
+const (
+	CUSTOM_EOF_TIMEOUT int = 100 // 100ms
+)
+
 type UdpReaderType struct {
 	ipAddr string
 	port   int
 	interf string
+
+	trafficAvailable bool
 
 	handle       *pcap.Handle
 	packetSource *gopacket.PacketSource
@@ -22,9 +28,10 @@ type UdpReaderType struct {
 
 func UdpReader(ip string, port int, interf string) *UdpReaderType {
 	return &UdpReaderType{
-		ipAddr: ip,
-		port:   port,
-		interf: interf,
+		ipAddr:           ip,
+		port:             port,
+		interf:           interf,
+		trafficAvailable: false,
 	}
 }
 
@@ -48,6 +55,11 @@ func (udpReader *UdpReaderType) Open() error {
 	if err != nil {
 		return err
 	}
+	filter := fmt.Sprintf("udp and dst host %v and dst port %v", udpReader.ipAddr, udpReader.port)
+	err = udpReader.handle.SetBPFFilter(filter)
+	if err != nil {
+		return err
+	}
 
 	udpReader.packetSource = gopacket.NewPacketSource(udpReader.handle, udpReader.handle.LinkType())
 	return nil
@@ -58,10 +70,32 @@ func (udpReader *UdpReaderType) Close() {
 }
 
 func (udpReader *UdpReaderType) Read() ([]byte, bool) {
-	packet, ok := <-udpReader.packetSource.Packets()
+	timer := time.NewTimer(time.Duration(CUSTOM_EOF_TIMEOUT) * time.Millisecond)
+	defer timer.Stop()
+
+	var packet gopacket.Packet = nil
+	var ok bool = true
+
+	select {
+	case <-timer.C:
+		if udpReader.trafficAvailable {
+			log.Default().Println("No traffic")
+			udpReader.trafficAvailable = false
+		}
+	case packet, ok = <-udpReader.packetSource.Packets():
+		// continue to process packet
+		if !udpReader.trafficAvailable {
+			log.Default().Println("Traffic detected")
+			udpReader.trafficAvailable = true
+		}
+	}
 
 	if !ok {
 		return nil, false
+	}
+
+	if packet == nil {
+		return nil, true
 	}
 
 	iplayer := packet.Layer(layers.LayerTypeIPv4)
