@@ -17,13 +17,13 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"time"
 
 	"github.com/potterxu/tstool/io"
+	"github.com/potterxu/tstool/logger"
 	"github.com/potterxu/tstool/util"
 	"github.com/spf13/cobra"
 )
@@ -72,7 +72,7 @@ func capMulticast(args []string) {
 	util.PanicOnErr(err)
 	defer writer.Close()
 
-	log.Default().Println("Capture Start")
+	logger.Logger.Println("Capture Start")
 	go commonWorker(reader, writer)
 
 	c := make(chan os.Signal, 1)
@@ -108,13 +108,13 @@ func capMulticast(args []string) {
 	progressTimer.Stop()
 	fmt.Println()
 
-	log.Default().Println("Capture done")
+	logger.Logger.Println("Capture done")
 }
 
 func validateCapArgs(args []string) bool {
 	// multicast
 	if len(args) < 3 {
-		log.Fatal("use -h check for usage")
+		logger.Logger.Fatal("use -h check for usage")
 		return false
 	}
 	return true

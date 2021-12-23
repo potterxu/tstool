@@ -2,13 +2,13 @@ package io
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/potterxu/tstool/logger"
 )
 
 const (
@@ -79,13 +79,13 @@ func (udpReader *UdpReaderType) Read() ([]byte, bool) {
 	select {
 	case <-timer.C:
 		if udpReader.trafficAvailable {
-			log.Default().Println("No traffic")
+			logger.Logger.Println("No traffic")
 			udpReader.trafficAvailable = false
 		}
 	case packet, ok = <-udpReader.packetSource.Packets():
 		// continue to process packet
-		if !udpReader.trafficAvailable {
-			log.Default().Println("Traffic detected")
+		if !udpReader.trafficAvailable && ok {
+			logger.Logger.Println("Traffic detected")
 			udpReader.trafficAvailable = true
 		}
 	}
@@ -127,5 +127,5 @@ func (udpReader *UdpReaderType) Read() ([]byte, bool) {
 }
 
 func (udpReader *UdpReaderType) Write([]byte) {
-	log.Fatal("Multicast write not supported yet")
+	logger.Logger.Fatal("Multicast write not supported yet")
 }

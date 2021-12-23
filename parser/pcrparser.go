@@ -1,10 +1,9 @@
 package parser
 
 import (
-	"log"
-
 	"github.com/potterxu/mpts"
 	"github.com/potterxu/tstool/algo"
+	"github.com/potterxu/tstool/logger"
 )
 
 type PcrParserType struct {
@@ -47,7 +46,7 @@ func (p *PcrParserType) GetPcr(pos int64) int64 {
 	}
 
 	if index >= len(p.pcrPos)-1 || index < 0 {
-		log.Default().Println("Cannot interpolate pcr for pos", pos)
+		logger.Logger.Println("Cannot interpolate pcr for pos", pos)
 		return -1
 	}
 	pcr1 := p.pcrs[index]
