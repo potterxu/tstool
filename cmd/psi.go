@@ -17,10 +17,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/potterxu/mpts"
 	"github.com/potterxu/tstool/io"
+	"github.com/potterxu/tstool/logger"
 	"github.com/potterxu/tstool/parser"
 	"github.com/potterxu/tstool/util"
 	"github.com/spf13/cobra"
@@ -50,7 +50,7 @@ func runParsePsi(args []string) {
 
 	patPayload := getFirstPayload(inputFileName, 0)
 	if patPayload == nil {
-		log.Fatalln("No PAT found")
+		logger.Logger.Fatalln("No PAT found")
 	}
 	pats := mpts.Psi(patPayload).TableData.PAT
 	for _, pat := range pats {

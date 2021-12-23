@@ -1,13 +1,14 @@
 package util
 
 import (
-	"log"
 	"os"
+
+	"github.com/potterxu/tstool/logger"
 )
 
 func LogOnErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		logger.Logger.Fatal(err)
 	}
 }
 
@@ -23,7 +24,7 @@ func ExitOnErr(err error) {
 
 func ExitOnErrWithCode(err error, code int) {
 	if err != nil {
-		log.Fatal(err)
+		logger.Logger.Fatal(err)
 		os.Exit(code)
 	}
 }

@@ -18,7 +18,6 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/signal"
 	"sort"
@@ -29,6 +28,7 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 	"github.com/potterxu/mpts"
 	"github.com/potterxu/tstool/io"
+	"github.com/potterxu/tstool/logger"
 	"github.com/potterxu/tstool/util"
 	"github.com/spf13/cobra"
 )
@@ -60,8 +60,8 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 	timer := time.NewTicker(time.Duration(interval) * time.Second)
 	defer timer.Stop()
 
-	log.SetOutput(ioutil.Discard)
-	defer log.SetOutput(os.Stdout)
+	logger.Logger.SetOutput(ioutil.Discard)
+	defer logger.Logger.SetOutput(os.Stderr)
 
 	for {
 		select {
@@ -94,7 +94,7 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 				pktBuf := buf[i : i+188]
 				tsPkt := mpts.Packet(pktBuf)
 				if tsPkt == nil {
-					log.Fatal("invalid ts packet buffer ", pktBuf)
+					logger.Logger.Fatal("invalid ts packet buffer ", pktBuf)
 					continue
 				}
 				pktCnt[tsPkt.PID] += int64(tsPkt.PayloadLength * 8)
@@ -106,7 +106,7 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 func validateStatArgs(args []string) bool {
 	// multicast
 	if len(args) < 3 {
-		log.Fatal("use -h check for usage")
+		logger.Logger.Fatal("use -h check for usage")
 		return false
 	}
 	return true

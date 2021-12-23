@@ -17,12 +17,12 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 
 	"github.com/potterxu/mpts"
 	"github.com/potterxu/tstool/io"
+	"github.com/potterxu/tstool/logger"
 	"github.com/potterxu/tstool/parser"
 	"github.com/potterxu/tstool/util"
 	"github.com/spf13/cobra"
@@ -49,10 +49,10 @@ func init() {
 func validateParseArgs(args []string) bool {
 	// parse file
 	if len(args) == 1 {
-		log.Default().Println("Parse file", args[0])
+		logger.Logger.Println("Parse file", args[0])
 		return true
 	}
-	log.Fatal("use -h check for usage")
+	logger.Logger.Fatal("use -h check for usage")
 	return false
 }
 
@@ -84,7 +84,7 @@ func runParse(args []string) {
 		programPath := path.Join(outputDir, programDir)
 		err := os.Mkdir(programPath, 0755)
 		util.PanicOnErr(err)
-		// log.Default().Println("Parse Program", pat.ProgramNum)
+		// logger.Logger.Println("Parse Program", pat.ProgramNum)
 
 		pmtPID := pat.ProgramMapPID
 		pmtPayload := getFirstPayload(filename, pmtPID)
