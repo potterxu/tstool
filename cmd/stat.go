@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -56,12 +57,15 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 	pktCnt := make(map[int]int64)
 	rows := make([][]string, 0)
 
-	timer := time.NewTimer(time.Duration(interval) * time.Second)
+	timer := time.NewTicker(time.Duration(interval) * time.Second)
+	defer timer.Stop()
+
+	log.SetOutput(ioutil.Discard)
+	defer log.SetOutput(os.Stdout)
 
 	for {
 		select {
 		case <-timer.C:
-			timer.Reset(time.Duration(interval) * time.Second)
 			rows = [][]string{
 				{"pids", "ts rate/bps"},
 			}
