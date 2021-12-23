@@ -321,8 +321,8 @@ github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndr
 github.com/posener/complete v1.2.3/go.mod h1:WZIdtGGp+qx0sLrYKtIRAruyNpv6hFCicSgv7Sy7s/s=
 github.com/potterxu/bitreader v0.0.2 h1:oFOXpMwuatGrIY6pmBAQRpwt1lRWfINOtU+XT03/eTc=
 github.com/potterxu/bitreader v0.0.2/go.mod h1:zvQewWmu5YxT6gjvCjlpziVv3S/CTHMeRqo+pcgROmo=
-github.com/potterxu/mpts v1.1.0 h1:+UsdeW17ItgCmUrwQ0QOuOY9Ubum7vxey/1ROQf2q70=
-github.com/potterxu/mpts v1.1.0/go.mod h1:vTgswu53y1qbZOfZnRS4lhHF6aJOU+vzufckohKB6jI=
+github.com/potterxu/mpts v1.1.1 h1:Ez485+atmz6pCO8wPuksKduuVZpdmB7q/rYjHeIdGys=
+github.com/potterxu/mpts v1.1.1/go.mod h1:vTgswu53y1qbZOfZnRS4lhHF6aJOU+vzufckohKB6jI=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v1.0.0/go.mod h1:db9x61etRT2tGnBNRi70OPL5FsnadC4Ky3P0J6CfImo=
 github.com/prometheus/client_golang v1.4.0/go.mod h1:e9GMxYsXl05ICDXkRhurwBS4Q3OK1iX/F2sw+iXX5zU=
