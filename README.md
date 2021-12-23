@@ -11,7 +11,7 @@ tstool stat (interface ipAddress port) [flags]
 
 Flags:
   -h, --help           help for stat
-  -i, --interval int   Statistics update interval in seconds (default 3)
+  -i, --interval int   Statistics update interval in milliseconds (default 400ms)
 ```
 
 ## cap

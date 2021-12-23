@@ -27,6 +27,7 @@ import (
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"github.com/potterxu/mpts"
+	"github.com/potterxu/tstool/algo"
 	"github.com/potterxu/tstool/io"
 	"github.com/potterxu/tstool/logger"
 	"github.com/potterxu/tstool/util"
@@ -50,14 +51,15 @@ var (
 func init() {
 	rootCmd.AddCommand(statCmd)
 
-	statCmd.Flags().IntVarP(&interval, "interval", "i", 3, "Statistics update interval in seconds")
+	statCmd.Flags().IntVarP(&interval, "interval", "i", 400, "Statistics update interval in milliseconds")
 }
 
 func multicastStatWorker(reader io.IOReaderInterface) {
-	pktCnt := make(map[int]int64)
 	rows := make([][]string, 0)
+	pktTimeQueue := make(map[int][]int64)
+	const MAX_TIME_INTERVAL int64 = 2000
 
-	timer := time.NewTicker(time.Duration(interval) * time.Second)
+	timer := time.NewTicker(time.Duration(interval) * time.Millisecond)
 	defer timer.Stop()
 
 	logger.Logger.SetOutput(ioutil.Discard)
@@ -70,17 +72,28 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 				{"pids", "ts rate/bps"},
 			}
 
-			keys := make([]int, len(pktCnt))
+			pids := make([]int, len(pktTimeQueue))
 			i := 0
-			for k := range pktCnt {
-				keys[i] = k
+			for k := range pktTimeQueue {
+				pids[i] = k
 				i++
 			}
-			sort.Ints(keys)
-			for _, k := range keys {
-				bitrate := pktCnt[k] / int64(interval)
-				rows = append(rows, []string{fmt.Sprint(k), fmt.Sprint(bitrate)})
-				delete(pktCnt, k)
+			sort.Ints(pids)
+			for _, pid := range pids {
+				if len(pktTimeQueue[pid]) < 2 {
+					continue
+				}
+				lastTime := time.Now().UnixMilli()
+				offset := algo.BinarySearchNoSmallerThan(pktTimeQueue[pid], lastTime-MAX_TIME_INTERVAL)
+				pktTimeQueue[pid] = pktTimeQueue[pid][offset:]
+
+				if len(pktTimeQueue[pid]) > 0 {
+					dur := lastTime - pktTimeQueue[pid][0]
+					bitrate := int64(len(pktTimeQueue[pid])) * int64(mpts.TS_PACKET_SIZE) * 8 * 1000 / int64(dur)
+					rows = append(rows, []string{fmt.Sprint(pid), fmt.Sprint(bitrate)})
+				} else {
+					delete(pktTimeQueue, pid)
+				}
 			}
 			displayInTableUI(rows)
 		default:
@@ -97,7 +110,12 @@ func multicastStatWorker(reader io.IOReaderInterface) {
 					logger.Logger.Fatal("invalid ts packet buffer ", pktBuf)
 					continue
 				}
-				pktCnt[tsPkt.PID] += int64(tsPkt.PayloadLength * 8)
+
+				curTime := time.Now().UnixMilli()
+				if pktTimeQueue[tsPkt.PID] == nil {
+					pktTimeQueue[tsPkt.PID] = make([]int64, 0)
+				}
+				pktTimeQueue[tsPkt.PID] = append(pktTimeQueue[tsPkt.PID], curTime)
 			}
 		}
 	}
