@@ -64,12 +64,12 @@ func runParsePsi(args []string) {
 		fmt.Println("\tPCR:", pmt.PcrPID)
 		fmt.Println("\tProgramDescriptors:")
 		for _, d := range pmt.ProgramDescriptors {
-			fmt.Printf("\t\t Descriptor 0x%02x %v\n", d.Tag, util.ArrayInHex(d.Data))
+			fmt.Printf("\t\t Descriptor %v %v\n", util.DescriptorTag(d.Tag), util.ArrayInHex(d.Data))
 		}
 		for _, info := range pmt.ElementStreamInfos {
 			fmt.Println("\tPID:", info.ElementaryPID)
 			for _, d := range info.ESDescriptors {
-				fmt.Printf("\t\t Descriptor 0x%02x %v\n", d.Tag, util.ArrayInHex(d.Data))
+				fmt.Printf("\t\t Descriptor %v %v\n", util.DescriptorTag(d.Tag), util.ArrayInHex(d.Data))
 			}
 		}
 	}
