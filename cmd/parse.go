@@ -73,8 +73,10 @@ func runParse(args []string) {
 	}
 
 	filename = args[0]
-	err := os.Mkdir(outputDir, 0755)
-	util.PanicOnErr(err)
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		err := os.Mkdir(outputDir, 0755)
+		util.PanicOnErr(err)
+	}
 
 	patPayload := getFirstPayload(filename, 0)
 	pats := mpts.Psi(patPayload).TableData.PAT
@@ -82,9 +84,10 @@ func runParse(args []string) {
 	for _, pat := range pats {
 		programDir := fmt.Sprintf("Program_%v", pat.ProgramNum)
 		programPath := path.Join(outputDir, programDir)
-		err := os.Mkdir(programPath, 0755)
-		util.PanicOnErr(err)
-		// logger.Logger.Println("Parse Program", pat.ProgramNum)
+		if _, err := os.Stat(programPath); os.IsNotExist(err) {
+			err := os.Mkdir(programPath, 0755)
+			util.PanicOnErr(err)
+		}
 
 		pmtPID := pat.ProgramMapPID
 		pmtPayload := getFirstPayload(filename, pmtPID)
