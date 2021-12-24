@@ -35,7 +35,7 @@ func (p *PayloadParserType) Parse(pkt *mpts.PacketType) ([]byte, int64, bool) {
 			p.payload = make([]byte, 0)
 		}
 
-		if p.payload != nil {
+		if p.payload != nil && pkt.Payload != nil {
 			p.payload = append(p.payload, pkt.Payload.Data...)
 		}
 	}
