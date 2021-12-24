@@ -55,3 +55,18 @@ func (p *PcrParserType) GetPcr(pos int64) int64 {
 	pos2 := p.pcrPos[index+1]
 	return pcr1 + (pcr2-pcr1)*(pos-pos1)/(pos2-pos1)
 }
+
+func (p *PcrParserType) ParseWithPos(pkt *mpts.PacketType, pktPos int64) (int64, int64, bool) {
+	var pcr int64 = -1
+	var pos int64 = -1
+	var ok bool = false
+	if pkt.PID == p.pid && pkt.AdaptationLength > 0 && pkt.Adaptation.PCRFlag {
+		p.pcrs = append(p.pcrs, pkt.Adaptation.PCR)
+		p.pcrPos = append(p.pcrPos, pktPos)
+
+		pcr = pkt.Adaptation.PCR
+		pos = pktPos
+		ok = true
+	}
+	return pcr, pos, ok
+}

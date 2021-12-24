@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"path"
 
 	"github.com/potterxu/mpts"
@@ -75,6 +76,9 @@ func runParse(args []string) {
 	filename = args[0]
 	err := os.Mkdir(outputDir, 0755)
 	util.PanicOnErr(err)
+
+	dynamicParse()
+	return
 
 	patPayload := getFirstPayload(filename, 0)
 	pats := mpts.Psi(patPayload).TableData.PAT
@@ -159,8 +163,6 @@ func parsePesPIDs() {
 	util.PanicOnErr(err)
 	defer reader.Close()
 
-	pos := int64(0)
-
 	head := fmt.Sprintln("Pos", "Size", "Pcr")
 
 	pidToWriter := make(map[int]io.IOWriterInterface)
@@ -189,7 +191,84 @@ func parsePesPIDs() {
 					}
 				}
 			}
-			pos++
 		}
+	}
+}
+
+var stopChan = make(chan os.Signal, 1)
+
+// programNumToPcrParser = make(map[int]*parser.PcrParserType)
+// 	pidToPayloadParser    = make(map[int]*parser.PayloadParserType)
+// 	pidToOutfile          = make(map[int]string)
+// 	pcrPidToOutfile       = make(map[int]string)
+// 	pidToProgramNum       = make(map[int]int)
+
+// 	pcrPIDs  = make([]int, 0)
+// 	filename = ""
+
+func pxu() {
+	reader := io.FileReader(filename)
+	err := reader.Open()
+	util.PanicOnErr(err)
+	defer reader.Close()
+
+	pos := int64(0)
+	pidToPayloadParser := make([]*parser.PayloadParserType, 8192)
+	for pid, _ := range pidToPayloadParser {
+		pidToPayloadParser[pid] = parser.PayloadParser(pid)
+	}
+	type pktRecord struct {
+		Pid int
+		Pos int64
+		Pkt *mpts.PacketType
+	}
+	pktRecordChan := make(chan *pktRecord, 1000000)
+
+	pidToPcrParser := make(map[int]*parser.PcrParserType)
+	pcrPIDs := make([]bool, 8192)
+
+	for {
+		data, ok := reader.Read()
+		if !ok {
+			break
+		}
+		if data != nil {
+			for i := 0; i < len(data); i += 188 {
+				pktBuf := data[i : i+188]
+				pkt := mpts.Packet(pktBuf)
+				if pkt != nil {
+					pid := pkt.PID
+					pktRecordChan <- &pktRecord{pid, pos, pkt}
+					pktRecordChan <- &pktRecord{-1, -1, nil} // a pause handling signal
+					if pid == 0 {
+
+					} else if pcrPIDs[pid] {
+						// is pcrPid
+						pidToPcrParser[pid].ParseWithPos(pkt, pos)
+						for {
+							record, _ := <-pktRecordChan
+							if record.Pid == -1 {
+								break
+							}
+							payload, payloadPos, ok := pidToPayloadParser[record.Pid].ParseWithPos(record.Pkt, record.Pos)
+							if ok {
+								// get pcr
+							}
+						}
+					}
+					pos++
+				}
+			}
+		}
+	}
+	stopChan <- os.Interrupt
+}
+
+func dynamicParse() {
+	go pxu()
+	signal.Notify(stopChan, os.Interrupt)
+
+	select {
+	case <-stopChan:
 	}
 }

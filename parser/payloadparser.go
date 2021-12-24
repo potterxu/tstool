@@ -44,3 +44,26 @@ func (p *PayloadParserType) Parse(pkt *mpts.PacketType) ([]byte, int64, bool) {
 
 	return rv, pos, ok
 }
+
+func (p *PayloadParserType) ParseWithPos(pkt *mpts.PacketType, pktPos int64) ([]byte, int64, bool) {
+	var rv []byte = nil
+	var pos = p.lastStartPos
+	var ok bool = false
+
+	if pkt.PID == p.pid {
+		if pkt.PUSI {
+			p.lastStartPos = pktPos
+			if p.payload != nil {
+				rv = p.payload
+				ok = true
+			}
+			p.payload = make([]byte, 0)
+		}
+
+		if p.payload != nil && pkt.Payload != nil {
+			p.payload = append(p.payload, pkt.Payload.Data...)
+		}
+	}
+
+	return rv, pos, ok
+}
